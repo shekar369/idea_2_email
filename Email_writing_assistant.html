@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Spec: Email Writing Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Calm Harmony Neutrals -->
+    <!-- Application Structure Plan: The application is structured as a single-page dashboard with a fixed top navigation bar for quick access to key sections: Overview, Architecture, API, Database, and Deployment. This non-linear structure allows users (developers, PMs) to either get a high-level summary or dive deep into a specific technical area of interest. The core of the application is a custom, interactive CSS-based diagram representing the 3-tier architecture. Clicking on each tier reveals detailed requirements, translating the dense text of the source document into a more digestible, guided exploration. This design prioritizes usability and quick information retrieval over a simple linear presentation of the original report. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Project's 3-tier architecture. -> Goal: Organize/Relationships. -> Viz/Presentation: Interactive diagram using styled HTML divs and CSS pseudo-elements for connectors. -> Interaction: Click on a component (Frontend, Backend, DB) to toggle a detailed information panel. -> Justification: Visually clarifies the system's structure and component relationships, which is more intuitive than reading a list. -> Library/Method: Vanilla JS and Tailwind CSS.
+        - Report Info: API Endpoints. -> Goal: Organize/Inform. -> Viz/Presentation: Collapsible accordion list. -> Interaction: Click on an endpoint to expand and view its details. -> Justification: Keeps the initial view clean and allows users to focus on specific endpoints without being overwhelmed. -> Library/Method: Vanilla JS and Tailwind CSS.
+        - Report Info: Database tables. -> Goal: Organize. -> Viz/Presentation: Styled cards for each table, with rows for each column. -> Interaction: Static display with clear visual hierarchy. -> Justification: A simple, clear card format is sufficient for presenting structured schema information effectively. -> Library/Method: Tailwind CSS.
+        - Report Info: Deployment checklist. -> Goal: Inform. -> Viz/Presentation: A styled checklist. -> Interaction: Static display. -> Justification: A checklist format is the most direct and user-friendly way to present setup steps. -> Library/Method: Tailwind CSS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .nav-link {
+            transition: color 0.3s, border-bottom-color 0.3s;
+        }
+        .nav-link.active {
+            color: #2563eb; 
+            border-bottom-color: #2563eb;
+        }
+        .architecture-box {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .connector {
+            position: absolute;
+            background-color: #9ca3af;
+            z-index: 0;
+        }
+        .connector.right {
+            top: 50%;
+            left: 100%;
+            width: 5rem;
+            height: 2px;
+            transform: translateY(-50%);
+        }
+        .connector.down {
+            top: 100%;
+            left: 50%;
+            width: 2px;
+            height: 3rem;
+            transform: translateX(-50%);
+        }
+        .details-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.7s ease-in-out;
+        }
+        .details-panel.open {
+            max-height: 1000px; /* Adjust as needed */
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+        .accordion-content.open {
+            max-height: 500px;
+        }
+        .icon-rotate {
+            transition: transform 0.3s;
+        }
+        .open .icon-rotate {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-700">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-40 border-b border-slate-200">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-slate-800">Email Assistant Spec</h1>
+                </div>
+                <div class="hidden md:flex md:items-baseline md:space-x-8">
+                    <a href="#overview" class="nav-link px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-slate-500 hover:text-slate-800">Overview</a>
+                    <a href="#architecture" class="nav-link px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-slate-500 hover:text-slate-800">Architecture</a>
+                    <a href="#api" class="nav-link px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-slate-500 hover:text-slate-800">API Endpoints</a>
+                    <a href="#database" class="nav-link px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-slate-500 hover:text-slate-800">Database Schema</a>
+                    <a href="#deployment" class="nav-link px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-slate-500 hover:text-slate-800">Deployment</a>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-slate-500 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500">
+                        <span class="sr-only">Open main menu</span>
+                        <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#overview" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-50">Overview</a>
+                <a href="#architecture" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-50">Architecture</a>
+                <a href="#api" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-50">API Endpoints</a>
+                <a href="#database" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-50">Database Schema</a>
+                <a href="#deployment" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-50">Deployment</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        
+        <section id="overview" class="mb-24 scroll-mt-24">
+            <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Project Overview</h2>
+            <p class="mt-4 text-lg text-slate-600">This document outlines the full-stack architecture for a robust Email Writing Assistant. The application is designed to help users transform raw thoughts into polished, context-aware emails using AI, with a focus on flexible LLM integration and secure user management. Below are the core features of the platform.</p>
+            <div class="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200/50">
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">🤖</span>
+                        <h3 class="text-lg font-semibold text-slate-800">AI-Powered Generation</h3>
+                    </div>
+                    <p class="mt-2 text-slate-600">Converts user's raw, unstructured thoughts into well-crafted emails with selectable tones.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200/50">
+                    <div class="flex items-center gap-4">
+                         <span class="text-3xl">⚙️</span>
+                        <h3 class="text-lg font-semibold text-slate-800">Flexible LLM Integration</h3>
+                    </div>
+                    <p class="mt-2 text-slate-600">Supports both local models via Ollama and major cloud-based LLM services.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200/50">
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">👤</span>
+                        <h3 class="text-lg font-semibold text-slate-800">Secure User Authentication</h3>
+                    </div>
+                    <p class="mt-2 text-slate-600">Features JWT-based authentication with standard email/password registration and login.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200/50">
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">🔧</span>
+                        <h3 class="text-lg font-semibold text-slate-800">Personalized Settings</h3>
+                    </div>
+                    <p class="mt-2 text-slate-600">A dedicated settings page for users to manage their preferred LLM provider and API keys.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200/50">
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">🖥️</span>
+                        <h3 class="text-lg font-semibold text-slate-800">PHP & React Stack</h3>
+                    </div>
+                    <p class="mt-2 text-slate-600">Built with a modern React frontend and a robust PHP backend, suitable for hosting on platforms like HostGator.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200/50">
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">🗃️</span>
+                        <h3 class="text-lg font-semibold text-slate-800">Relational Database</h3>
+                    </div>
+                    <p class="mt-2 text-slate-600">Uses a MySQL/MariaDB database to securely store user and settings data.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="architecture" class="mb-24 scroll-mt-24">
+            <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">System Architecture</h2>
+            <p class="mt-4 text-lg text-slate-600">The application follows a classic 3-tier architecture. The user interacts with a dynamic React frontend, which communicates with a PHP backend via a RESTful API. The backend handles all business logic, including authentication and communication with LLMs, and persists data in a MySQL database. Click on each component below to explore its specific requirements.</p>
+            <div class="mt-12">
+                <div class="relative flex flex-col lg:flex-row justify-around items-center gap-y-12 lg:gap-y-0">
+                    <div data-target="frontend-details" class="architecture-box w-64 h-40 p-4 bg-blue-100 border-2 border-blue-300 rounded-lg flex flex-col justify-center items-center text-center cursor-pointer hover:shadow-xl hover:scale-105 z-10">
+                        <h3 class="text-xl font-bold text-blue-800">React Frontend</h3>
+                        <p class="text-sm text-blue-700 mt-2">Handles user interface, state management, and API calls.</p>
+                        <div class="connector right hidden lg:block"></div>
+                    </div>
+                    <div class="connector down block lg:hidden"></div>
+                    <div data-target="backend-details" class="architecture-box w-64 h-40 p-4 bg-green-100 border-2 border-green-300 rounded-lg flex flex-col justify-center items-center text-center cursor-pointer hover:shadow-xl hover:scale-105 z-10">
+                        <h3 class="text-xl font-bold text-green-800">PHP Backend</h3>
+                        <p class="text-sm text-green-700 mt-2">Manages business logic, authentication, and LLM orchestration.</p>
+                        <div class="connector right hidden lg:block"></div>
+                    </div>
+                    <div class="connector down block lg:hidden"></div>
+                    <div data-target="database-details" class="architecture-box w-64 h-40 p-4 bg-purple-100 border-2 border-purple-300 rounded-lg flex flex-col justify-center items-center text-center cursor-pointer hover:shadow-xl hover:scale-105 z-10">
+                        <h3 class="text-xl font-bold text-purple-800">MySQL Database</h3>
+                        <p class="text-sm text-purple-700 mt-2">Stores all user and application settings data securely.</p>
+                    </div>
+                </div>
+
+                <div id="frontend-details" class="details-panel mt-8 p-6 bg-white rounded-lg border border-slate-200">
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-4">Frontend Requirements (React)</h3>
+                    <ul class="list-disc list-inside space-y-2 text-slate-600">
+                        <li>Utilize the base `email-writer-app.tsx` component.</li>
+                        <li>Implement a full authentication flow (Login, Register pages).</li>
+                        <li>Create a dedicated, navigable Settings page for LLM configuration.</li>
+                        <li>Manage navigation between the main app, auth pages, and settings.</li>
+                        <li>Use Tailwind CSS for a responsive and modern UI.</li>
+                        <li>All dynamic actions must communicate with the PHP backend via RESTful APIs.</li>
+                    </ul>
+                </div>
+                <div id="backend-details" class="details-panel mt-8 p-6 bg-white rounded-lg border border-slate-200">
+                     <h3 class="text-2xl font-semibold text-slate-800 mb-4">Backend Requirements (PHP)</h3>
+                    <ul class="list-disc list-inside space-y-2 text-slate-600">
+                        <li>Develop a RESTful API using plain PHP or a lightweight framework.</li>
+                        <li>Implement JWT-based authentication and authorization for secure endpoints.</li>
+                        <li>Create endpoints for user management, LLM settings, and email generation.</li>
+                        <li>Build logic to dynamically select and communicate with the user's chosen LLM (Ollama or cloud providers).</li>
+                        <li>Manage environment variables for sensitive data like DB credentials and JWT secret.</li>
+                        <li>Store user-specific API keys securely in the database, with encryption.</li>
+                    </ul>
+                </div>
+                <div id="database-details" class="details-panel mt-8 p-6 bg-white rounded-lg border border-slate-200">
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-4">Database Requirements (MySQL/MariaDB)</h3>
+                    <ul class="list-disc list-inside space-y-2 text-slate-600">
+                        <li>Design a relational schema with `users` and `user_settings` tables.</li>
+                        <li>Use strong hashing algorithms (e.g., `password_hash()`) for user passwords.</li>
+                        <li>Implement encryption (e.g., `openssl_encrypt()`) for storing sensitive API keys.</li>
+                        <li>Ensure a one-to-one relationship between a user and their settings.</li>
+                        <li>Add appropriate indexes on frequently queried columns (e.g., `email`, `user_id`) to optimize performance.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="api" class="mb-24 scroll-mt-24">
+            <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">API Endpoints</h2>
+            <p class="mt-4 text-lg text-slate-600">The backend provides a clear set of RESTful API endpoints for the frontend to consume. The API handles authentication, user settings, and the core email generation functionality. Click each endpoint to see more details.</p>
+            <div class="mt-10 space-y-4">
+                <div class="accordion-item bg-white border border-slate-200 rounded-lg">
+                    <button class="accordion-header w-full flex justify-between items-center p-5 text-left">
+                        <div class="flex items-center gap-4">
+                            <span class="font-mono text-sm font-semibold text-white bg-green-600 rounded px-2 py-1">POST</span>
+                            <span class="font-mono text-slate-800">/api/register</span>
+                        </div>
+                        <span class="icon-rotate text-slate-400">▼</span>
+                    </button>
+                    <div class="accordion-content px-5 pb-5 text-slate-600">
+                        <p>Registers a new user with an email and password. Hashes the password before storing it. Returns a JWT on success.</p>
+                    </div>
+                </div>
+                <div class="accordion-item bg-white border border-slate-200 rounded-lg">
+                    <button class="accordion-header w-full flex justify-between items-center p-5 text-left">
+                        <div class="flex items-center gap-4">
+                            <span class="font-mono text-sm font-semibold text-white bg-green-600 rounded px-2 py-1">POST</span>
+                            <span class="font-mono text-slate-800">/api/login</span>
+                        </div>
+                        <span class="icon-rotate text-slate-400">▼</span>
+                    </button>
+                    <div class="accordion-content px-5 pb-5 text-slate-600">
+                        <p>Authenticates a user with email and password. Returns a JWT on success.</p>
+                    </div>
+                </div>
+                <div class="accordion-item bg-white border border-slate-200 rounded-lg">
+                    <button class="accordion-header w-full flex justify-between items-center p-5 text-left">
+                        <div class="flex items-center gap-4">
+                            <span class="font-mono text-sm font-semibold text-white bg-blue-600 rounded px-2 py-1">GET</span>
+                            <span class="font-mono text-slate-800">/api/settings/llm</span>
+                        </div>
+                        <span class="icon-rotate text-slate-400">▼</span>
+                    </button>
+                    <div class="accordion-content px-5 pb-5 text-slate-600">
+                        <p>Retrieves the current authenticated user's LLM settings (preferred provider, keys, etc.). Requires a valid JWT.</p>
+                    </div>
+                </div>
+                 <div class="accordion-item bg-white border border-slate-200 rounded-lg">
+                    <button class="accordion-header w-full flex justify-between items-center p-5 text-left">
+                        <div class="flex items-center gap-4">
+                            <span class="font-mono text-sm font-semibold text-white bg-green-600 rounded px-2 py-1">POST</span>
+                            <span class="font-mono text-slate-800">/api/settings/llm</span>
+                        </div>
+                        <span class="icon-rotate text-slate-400">▼</span>
+                    </button>
+                    <div class="accordion-content px-5 pb-5 text-slate-600">
+                        <p>Updates the current authenticated user's LLM settings. Requires a valid JWT.</p>
+                    </div>
+                </div>
+                <div class="accordion-item bg-white border border-slate-200 rounded-lg">
+                    <button class="accordion-header w-full flex justify-between items-center p-5 text-left">
+                        <div class="flex items-center gap-4">
+                            <span class="font-mono text-sm font-semibold text-white bg-green-600 rounded px-2 py-1">POST</span>
+                            <span class="font-mono text-slate-800">/api/generate-email</span>
+                        </div>
+                        <span class="icon-rotate text-slate-400">▼</span>
+                    </button>
+                    <div class="accordion-content px-5 pb-5 text-slate-600">
+                        <p>Accepts raw thoughts, tone, and context. Uses the user's saved settings to call the appropriate LLM and returns the generated email. Requires a valid JWT.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="database" class="mb-24 scroll-mt-24">
+            <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Database Schema</h2>
+            <p class="mt-4 text-lg text-slate-600">The data is organized into two main tables: `users` for storing authentication information and `user_settings` for persisting individual LLM configurations. This separation ensures that user data is distinct from application settings.</p>
+            <div class="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200/50">
+                    <h3 class="text-xl font-semibold text-slate-800 mb-4">`users` table</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>id <span class="text-xs font-semibold text-red-600">PK</span></span> <span class="font-mono text-sm text-slate-500">INT, AUTO_INCREMENT</span></div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>email <span class="text-xs font-semibold text-yellow-600">UNIQUE</span></span> <span class="font-mono text-sm text-slate-500">VARCHAR</span></div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>password_hash</span> <span class="font-mono text-sm text-slate-500">VARCHAR</span></div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>sso_provider</span> <span class="font-mono text-sm text-slate-500">VARCHAR, NULL</span></div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>sso_id</span> <span class="font-mono text-sm text-slate-500">VARCHAR, NULL</span></div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>created_at</span> <span class="font-mono text-sm text-slate-500">DATETIME</span></div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200/50">
+                    <h3 class="text-xl font-semibold text-slate-800 mb-4">`user_settings` table</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>id <span class="text-xs font-semibold text-red-600">PK</span></span> <span class="font-mono text-sm text-slate-500">INT, AUTO_INCREMENT</span></div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>user_id <span class="text-xs font-semibold text-blue-600">FK</span> <span class="text-xs font-semibold text-yellow-600">UNIQUE</span></span> <span class="font-mono text-sm text-slate-500">INT</span></div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>preferred_llm</span> <span class="font-mono text-sm text-slate-500">VARCHAR</span></div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>ollama_endpoint</span> <span class="font-mono text-sm text-slate-500">VARCHAR, NULL</span></div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>openai_api_key</span> <span class="font-mono text-sm text-slate-500">VARCHAR, NULL</span></div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>...other_api_keys</span> <span class="font-mono text-sm text-slate-500">VARCHAR, NULL</span></div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md"><span>updated_at</span> <span class="font-mono text-sm text-slate-500">DATETIME</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="deployment" class="scroll-mt-24">
+            <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Deployment & Documentation</h2>
+            <p class="mt-4 text-lg text-slate-600">A comprehensive `README.md` file will guide the setup process. Below is a checklist of the key setup stages for getting the application running locally and preparing for deployment.</p>
+            <div class="mt-10 bg-white p-8 rounded-lg shadow-md border border-slate-200/50">
+                <ul class="space-y-4">
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 text-green-500 mt-1">✓</span>
+                        <div><strong class="text-slate-800">Prerequisites:</strong> Ensure required software (PHP, Composer, Node.js, MySQL) is installed.</div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 text-green-500 mt-1">✓</span>
+                        <div><strong class="text-slate-800">Clone Repository:</strong> Get a local copy of the source code from the repository.</div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 text-green-500 mt-1">✓</span>
+                        <div><strong class="text-slate-800">Backend Setup:</strong> Install PHP dependencies with Composer, create a `.env` file for credentials, and import the database schema.</div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 text-green-500 mt-1">✓</span>
+                        <div><strong class="text-slate-800">Frontend Setup:</strong> Install Node.js dependencies with npm/yarn and start the React development server.</div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 text-green-500 mt-1">✓</span>
+                        <div><strong class="text-slate-800">LLM Configuration:</strong> Follow instructions to set up a local Ollama instance or obtain API keys for cloud services, then configure them in the app's settings page.</div>
+                    </li>
+                     <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 text-green-500 mt-1">✓</span>
+                        <div><strong class="text-slate-800">Run Application:</strong> Start both the PHP and React development servers to run the full application.</div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            const architectureBoxes = document.querySelectorAll('.architecture-box');
+            architectureBoxes.forEach(box => {
+                box.addEventListener('click', () => {
+                    const targetId = box.dataset.target;
+                    const targetPanel = document.getElementById(targetId);
+
+                    document.querySelectorAll('.details-panel').forEach(panel => {
+                        if (panel.id !== targetId) {
+                            panel.classList.remove('open');
+                        }
+                    });
+                    
+                    targetPanel.classList.toggle('open');
+                });
+            });
+            
+            const accordionHeaders = document.querySelectorAll('.accordion-header');
+            accordionHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const item = header.parentElement;
+                    
+                    item.classList.toggle('open');
+                    content.classList.toggle('open');
+                });
+            });
+
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.4
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href').substring(1) === entry.target.id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+            
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    if(this.closest('#mobile-menu')) {
+                       mobileMenu.classList.add('hidden');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
