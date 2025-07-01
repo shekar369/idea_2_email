@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Send, Copy, Check, Mail, Sparkles, MessageSquare, User } from 'lucide-react';
+import { generateNewEmail } from '../services/api'; // Import the API function
 
-export default function EmailWriterApp() {
+// Renaming the component to EmailWriterCore as it's no longer the main "App"
+export default function EmailWriterCore() {
   const [rawThoughts, setRawThoughts] = useState('');
   const [tone, setTone] = useState('professional');
   const [contextEmail, setContextEmail] = useState('');
@@ -19,35 +21,42 @@ export default function EmailWriterApp() {
     { value: 'persuasive', label: 'Persuasive', description: 'Compelling and convincing' }
   ];
 
+  /**
+   * Handles the email generation process.
+   * It calls the backend API with the user's input (rawThoughts, tone, contextEmail).
+   * Updates the state with the generated email or an error message.
+   */
   const generateEmail = async () => {
-    if (!rawThoughts.trim()) return;
+    if (!rawThoughts.trim()) return; // Do not proceed if rawThoughts is empty
 
     setIsLoading(true);
+    setGeneratedEmail(''); // Clear previous email before new generation
     try {
-      const contextPart = contextEmail.trim() 
-        ? `\n\nContext - I am responding to this email:\n"${contextEmail}"\n\n`
-        : '';
+      const emailData = {
+        rawThoughts,
+        tone,
+        contextEmail: contextEmail.trim() ? contextEmail : undefined, // Only send contextEmail if it has content
+      };
 
-      const prompt = `You are an expert email writer. Transform the following raw thoughts into a well-crafted email with a ${tone} tone.
+      // Call the API service function to generate the email
+      const response = await generateNewEmail(emailData);
 
-Raw thoughts: "${rawThoughts}"${contextPart}
-
-Instructions:
-- Write a complete, professional email body
-- Use a ${tone} tone throughout
-- Make it clear, engaging, and well-structured
-- Ensure proper email etiquette
-- Do not include a subject line
-
-Respond with ONLY the email body content. Do not include any explanations or additional text outside of the email.`;
-
-      const response = await window.claude.complete(prompt);
-      setGeneratedEmail(response.trim());
-    } catch (error) {
-      console.error('Error generating email:', error);
-      setGeneratedEmail('Sorry, there was an error generating your email. Please try again.');
+      if (response.data && response.data.generatedEmail) {
+        setGeneratedEmail(response.data.generatedEmail.trim());
+      } else {
+        // Handle cases where the response might be successful (e.g., 200 OK) but not contain the expected data
+        console.error('Error generating email: Unexpected response format from API', response);
+        setGeneratedEmail('Sorry, there was an issue with the email generation response. Please check the format and try again.');
+      }
+    } catch (err: any) {
+      // Handle API call errors (network issues, server errors like 4xx, 5xx)
+      console.error('Error generating email via API:', err);
+      const errorMessage = err.response?.data?.error // Error message from backend
+                         || err.message             // Network error or other client-side error message
+                         || 'Sorry, there was an error generating your email. Please try again.';
+      setGeneratedEmail(errorMessage); // Display the error message in the output area
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Ensure loading state is reset
     }
   };
 
